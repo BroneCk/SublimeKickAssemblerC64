@@ -10,29 +10,36 @@ import shutil
 # Huge thanks to OdatNurd!!
  
 # List of variable names we want to support 
-custom_var_list = ["kickass_run_path",
-                   "kickass_debug_path",
-                   "kickass_jar_path",
-                   "kickass_args",
-                   "kickass_run_args",
-                   "kickass_debug_args",
-                   "kickass_startup_file_path",
-                   "kickass_compile_logfile_filename",
-                   "kickass_debug_logfile_filename",
-                   "kickass_run_logfile_filename",
-                   "kickass_breakpoint_filename",
-                   "kickass_compiled_filename",
-                   "kickass_output_path",
-                   "default_prebuild_path",
-                   "default_postbuild_path"]
+custom_var_list = [ "kickass_compile_args",
+                    "kickass_compile_debug_additional_args",
+                    "kickass_run_command_c64debugger",
+                    "kickass_debug_command_c64debugger",
+                    "kickass_run_command_x64",
+                    "kickass_debug_command_x64",
+                    "kickass_run_path",
+                    "kickass_debug_path",
+                    "kickass_jar_path",
+                    "kickass_args",
+                    "kickass_run_args",
+                    "kickass_debug_args",
+                    "kickass_startup_file_path",
+                    "kickass_breakpoint_filename",
+                    "kickass_compiled_filename",
+                    "kickass_output_path",
+                    "default_prebuild_path",
+                    "default_postbuild_path"]
 
-vars_to_expand_list = [ "kickass_compiled_filename",
-                        "kickass_compile_logfile_filename",
-                        "kickass_debug_logfile_filename",
-                        "kickass_run_logfile_filename",
+vars_to_expand_list = [ 
+                        "kickass_compiled_filename",
                         "kickass_args",
                         "kickass_run_args",
-                        "kickass_debug_args"]
+                        "kickass_debug_args",
+                        "kickass_compile_args",
+                        "kickass_run_command_x64",
+                        "kickass_debug_command_x64",
+                        "kickass_run_command_c64debugger",
+                        "kickass_debug_command_c64debugger",
+                        ]
 
 class KickassBuildCommand(sublime_plugin.WindowCommand):
     """
@@ -68,7 +75,7 @@ class KickassBuildCommand(sublime_plugin.WindowCommand):
         # arguments given.
         args = sublime.expand_variables (extendedDict, variables)
 
-        # Reset path to unexpanded add path addition from settings
+        # Reset path to unexpanded and add path addition from settings
         args['path'] = self.getPathDelimiter().join([settings.getSetting("kickass_path"), tmpPath])
 
         envSetting = settings.getSetting("kickass_env")
@@ -156,7 +163,6 @@ class KickAssCommand():
             "kickass_file_path": "${file_path}",
             "kickass_prg_file": "${file_path}/${kickass_output_path}/${kickass_compiled_filename}",
             "kickass_bin_folder": "${file_path}/${kickass_output_path}",
-
             }
         sourceDict.get('env').update(prePostEnvVars)
         return sourceDict
@@ -174,13 +180,18 @@ class KickAssCommandFactory():
         return KickAssCommand(makeCommand, True, False, buildMode)
 
     def createKickassCommand(self, variables, buildMode): 
-
-
         javaCommand = "java -cp \"${kickass_jar_path}\"" if self.__settings.getSetting("kickass_jar_path") else "java"  
-        compileCommand = javaCommand+" cml.kickass.KickAssembler \"${build_file_base_name}.${file_extension}\" -log \"${kickass_run_logfile_filename}\" -o \"${kickass_output_path}/${kickass_compiled_filename}\" -vicesymbols -showmem -symbolfiledir \"${kickass_output_path}\" ${kickass_args}"
-        compileDebugCommandAdd = "-afo :afo=true :usebin=true"
-        runCommand = "\"${kickass_run_path}\" -logfile \"${kickass_run_logfile_filename}\" ${kickass_run_args} \"${kickass_output_path}/${kickass_compiled_filename}\""
-        debugCommand = "\"${kickass_debug_path}\" -logfile \"${kickass_debug_logfile_filename}\" ${kickass_debug_args} \"${kickass_output_path}/${kickass_compiled_filename}\""
+        compileCommand = javaCommand+" cml.kickass.KickAssembler ${kickass_compile_args} "
+        compileDebugCommandAdd = "${kickass_compile_debug_additional_args}"
+
+        runCommand = "${kickass_run_command_x64}" 
+        if "c64debugger" in self.__settings.getSetting("kickass_run_path").lower():
+            runCommand = "${kickass_run_command_c64debugger}" 
+
+        debugCommand = "${kickass_debug_command_x64}"
+        if "c64debugger" in self.__settings.getSetting("kickass_debug_path").lower():
+            debugCommand = "${kickass_debug_command_c64debugger}" 
+
         useRun = 'run' in buildMode
         useDebug = 'debug' in buildMode
 
